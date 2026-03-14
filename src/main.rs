@@ -10,7 +10,7 @@ use layout::{Direction, Layout};
 
 #[derive(Parser)]
 #[command(name = "czor")]
-#[command(version = env!("CZOR_VERSION"))]
+#[command(version)]
 #[command(about = "A tmux layout manager", long_about = None)]
 struct Cli {
     #[command(subcommand)]
