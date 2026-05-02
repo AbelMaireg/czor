@@ -1,5 +1,9 @@
 # czor
 
+[![CI](https://github.com/AbelMaireg/czor/actions/workflows/ci.yml/badge.svg)](https://github.com/AbelMaireg/czor/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/czor.svg)](https://crates.io/crates/czor)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A tmux layout manager that makes it easy to create and apply complex pane layouts.
 
 ## Features
@@ -72,6 +76,10 @@ children:
       - weight: 1
         pane: true
 ```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
