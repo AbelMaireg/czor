@@ -38,7 +38,7 @@ Feature suggestions are welcome! Please open an issue with:
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/czor.git
+git clone https://github.com/AbelMaireg/czor.git
 cd czor
 
 # Build the project
@@ -48,7 +48,7 @@ cargo build
 cargo test
 
 # Run with debug output
-cargo run -- <command>
+cargo run
 ```
 
 ## Code Style
