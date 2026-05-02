@@ -16,4 +16,4 @@ mod types;
 #[allow(unused_imports)] // Exported for library API, used in tests
 pub use file::{from_file, from_json, from_yaml};
 pub use parser::parse;
-pub use types::{grid, weights_to_split_percentages, Direction, Layout};
+pub use types::{Direction, Layout, grid, weights_to_split_percentages};

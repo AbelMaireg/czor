@@ -1,6 +1,6 @@
 //! Recursive descent parser for the layout DSL.
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use super::lexer::{Lexer, Token};
 use super::types::{Direction, Layout};

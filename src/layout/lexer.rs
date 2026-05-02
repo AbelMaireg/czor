@@ -1,6 +1,6 @@
 //! Lexer for the layout DSL.
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 /// Tokens produced by the lexer.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,8 +1,8 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::layout::{weights_to_split_percentages, Direction, Layout};
+use crate::layout::{Direction, Layout, weights_to_split_percentages};
 
 static DEBUG: AtomicBool = AtomicBool::new(false);
 
