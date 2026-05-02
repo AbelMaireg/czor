@@ -1,7 +1,20 @@
 use anyhow::{bail, Context, Result};
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::layout::{weights_to_split_percentages, Direction, Layout};
+
+static DEBUG: AtomicBool = AtomicBool::new(false);
+
+pub fn set_debug(enabled: bool) {
+    DEBUG.store(enabled, Ordering::Relaxed);
+}
+
+fn debug_log(args: &[&str]) {
+    if DEBUG.load(Ordering::Relaxed) {
+        eprintln!("+ tmux {}", args.join(" "));
+    }
+}
 
 /// Execute a layout in the current tmux window
 pub fn execute(layout: &Layout) -> Result<()> {
@@ -13,8 +26,10 @@ pub fn execute(layout: &Layout) -> Result<()> {
 
 /// Get the current pane ID
 fn get_current_pane_id() -> Result<String> {
+    let args = ["display-message", "-p", "#{pane_id}"];
+    debug_log(&args);
     let output = Command::new("tmux")
-        .args(["display-message", "-p", "#{pane_id}"])
+        .args(args)
         .output()
         .context("Failed to run tmux display-message")?;
 
@@ -56,14 +71,15 @@ fn execute_node(node: &Layout, target_pane: &str) -> Result<Vec<String>> {
                 Direction::Vertical => "-v",
             };
 
-            // First child inherits the target pane
-            // Subsequent children are created by splitting
+            // First child inherits the target pane.
+            // Each subsequent split operates on the most recently created pane,
+            // because the cascading percentages assume that geometry.
             let mut pane_ids = vec![target_pane.to_string()];
+            let mut split_target = target_pane.to_string();
 
             for pct in &percentages {
-                // Split the target pane to create a new pane
-                // The new pane gets `pct` percent of the current pane
-                let new_pane_id = split_pane(target_pane, dir_flag, *pct)?;
+                let new_pane_id = split_pane(&split_target, dir_flag, *pct)?;
+                split_target = new_pane_id.clone();
                 pane_ids.push(new_pane_id);
             }
 
@@ -81,18 +97,21 @@ fn execute_node(node: &Layout, target_pane: &str) -> Result<Vec<String>> {
 
 /// Split a pane and return the new pane's ID
 fn split_pane(target_pane: &str, dir_flag: &str, percentage: u8) -> Result<String> {
+    let pct = percentage.to_string();
+    let args = [
+        "split-window",
+        dir_flag,
+        "-p",
+        &pct,
+        "-t",
+        target_pane,
+        "-P",
+        "-F",
+        "#{pane_id}",
+    ];
+    debug_log(&args);
     let output = Command::new("tmux")
-        .args([
-            "split-window",
-            dir_flag,
-            "-p",
-            &percentage.to_string(),
-            "-t",
-            target_pane,
-            "-P",
-            "-F",
-            "#{pane_id}",
-        ])
+        .args(args)
         .output()
         .context("Failed to run tmux split-window")?;
 

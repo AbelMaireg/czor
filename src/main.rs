@@ -13,6 +13,10 @@ use layout::{Direction, Layout};
 #[command(version)]
 #[command(about = "A tmux layout manager", long_about = None)]
 struct Cli {
+    /// Print each tmux command before executing it
+    #[arg(short, long, global = true)]
+    debug: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -59,6 +63,8 @@ fn main() -> Result<()> {
     }
 
     let cli = Cli::parse();
+
+    exec::set_debug(cli.debug);
 
     match cli.command {
         Commands::Split { direction, ratio } => {
