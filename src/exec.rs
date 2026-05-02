@@ -10,56 +10,43 @@ pub fn set_debug(enabled: bool) {
     DEBUG.store(enabled, Ordering::Relaxed);
 }
 
-fn debug_log(args: &[&str]) {
+fn run_tmux(args: &[&str]) -> Result<String> {
     if DEBUG.load(Ordering::Relaxed) {
         eprintln!("+ tmux {}", args.join(" "));
     }
+    let output = Command::new("tmux")
+        .args(args)
+        .output()
+        .with_context(|| format!("Failed to run tmux {}", args[0]))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        bail!("tmux {} failed: {}", args[0], stderr);
+    }
+
+    String::from_utf8(output.stdout)
+        .with_context(|| format!("Invalid UTF-8 in tmux {} output", args[0]))
+        .map(|s| s.trim().to_string())
 }
 
 /// Execute a layout in the current tmux window
 pub fn execute(layout: &Layout) -> Result<()> {
-    // Get the current pane ID
-    let current_pane = get_current_pane_id()?;
-    execute_node(layout, &current_pane)?;
-    Ok(())
+    let current_pane = run_tmux(&["display-message", "-p", "#{pane_id}"])?;
+    execute_node(layout, &current_pane)
 }
 
-/// Get the current pane ID
-fn get_current_pane_id() -> Result<String> {
-    let args = ["display-message", "-p", "#{pane_id}"];
-    debug_log(&args);
-    let output = Command::new("tmux")
-        .args(args)
-        .output()
-        .context("Failed to run tmux display-message")?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        bail!("tmux display-message failed: {}", stderr);
-    }
-
-    let pane_id = String::from_utf8(output.stdout)
-        .context("Invalid UTF-8 in pane ID")?
-        .trim()
-        .to_string();
-
-    Ok(pane_id)
-}
-
-/// Execute a layout node, returning the pane IDs created
-fn execute_node(node: &Layout, target_pane: &str) -> Result<Vec<String>> {
+fn execute_node(node: &Layout, target_pane: &str) -> Result<()> {
     match node {
-        Layout::Pane => Ok(vec![target_pane.to_string()]),
+        Layout::Pane => Ok(()),
         Layout::Split {
             direction,
             children,
         } => {
             if children.is_empty() {
-                return Ok(vec![target_pane.to_string()]);
+                return Ok(());
             }
 
             if children.len() == 1 {
-                // Only one child, just recurse into it
                 return execute_node(&children[0].1, target_pane);
             }
 
@@ -79,26 +66,22 @@ fn execute_node(node: &Layout, target_pane: &str) -> Result<Vec<String>> {
 
             for pct in &percentages {
                 let new_pane_id = split_pane(&split_target, dir_flag, *pct)?;
-                split_target = new_pane_id.clone();
-                pane_ids.push(new_pane_id);
+                pane_ids.push(new_pane_id.clone());
+                split_target = new_pane_id;
             }
 
-            // Now recurse into each child with its corresponding pane
-            let mut all_created_panes = Vec::new();
             for (i, (_, child)) in children.iter().enumerate() {
-                let child_panes = execute_node(child, &pane_ids[i])?;
-                all_created_panes.extend(child_panes);
+                execute_node(child, &pane_ids[i])?;
             }
 
-            Ok(all_created_panes)
+            Ok(())
         }
     }
 }
 
-/// Split a pane and return the new pane's ID
 fn split_pane(target_pane: &str, dir_flag: &str, percentage: u8) -> Result<String> {
     let pct = percentage.to_string();
-    let args = [
+    run_tmux(&[
         "split-window",
         dir_flag,
         "-p",
@@ -108,22 +91,5 @@ fn split_pane(target_pane: &str, dir_flag: &str, percentage: u8) -> Result<Strin
         "-P",
         "-F",
         "#{pane_id}",
-    ];
-    debug_log(&args);
-    let output = Command::new("tmux")
-        .args(args)
-        .output()
-        .context("Failed to run tmux split-window")?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        bail!("tmux split-window failed: {}", stderr);
-    }
-
-    let new_pane_id = String::from_utf8(output.stdout)
-        .context("Invalid UTF-8 in new pane ID")?
-        .trim()
-        .to_string();
-
-    Ok(new_pane_id)
+    ])
 }

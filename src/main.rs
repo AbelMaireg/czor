@@ -48,18 +48,8 @@ enum Commands {
 }
 
 fn main() -> Result<()> {
-    // Check if we're inside tmux
     if std::env::var("TMUX").is_err() {
         bail!("Not inside a tmux session. Please run czor from within tmux.");
-    }
-
-    // Check if tmux binary exists
-    if std::process::Command::new("tmux")
-        .arg("-V")
-        .output()
-        .is_err()
-    {
-        bail!("tmux binary not found on PATH.");
     }
 
     let cli = Cli::parse();
@@ -110,7 +100,7 @@ fn parse_ratio(s: &str) -> Result<Vec<u32>> {
             if weights.is_empty() {
                 bail!("Ratio cannot be empty");
             }
-            if weights.iter().any(|&w| w == 0) {
+            if weights.contains(&0) {
                 bail!("Ratio weights must be greater than 0");
             }
             Ok(weights)
